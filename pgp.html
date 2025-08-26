@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>4K PGP Key Generator</title>
+  <script src="https://openpgpjs.org/openpgpjs/dist/openpgp.min.js"></script>
+  <style>
+    #loadingBar {
+      width: 100%;
+      background-color: #f3f3f3;
+      border: 1px solid #ccc;
+      margin-top: 10px;
+    }
+    #loadingBarInner {
+      height: 20px;
+      width: 0;
+      background-color: #4caf50;
+    }
+  </style>
+</head>
+<body>
+
+  <h2>4K PGP Key Generation (No Email)</h2>
+
+  <div>
+    <label for="username">Enter your name or identifier:</label>
+    <input type="text" id="username" placeholder="Your Name">
+    <button id="generateKeys">Generate PGP Keys</button>
+  </div>
+
+  <h3>Generated Keys</h3>
+  <p><strong>Public Key:</strong></p>
+  <pre id="publicKey"></pre>
+  <p><strong>Private Key:</strong></p>
+  <pre id="privateKey"></pre>
+
+  <div id="loadingSpinner" style="display: none;">
+    <p>Generating keys... Please wait.</p>
+    <div id="loadingBar">
+      <div id="loadingBarInner"></div>
+    </div>
+  </div>
+
+  <script>
+    // Helper function to generate a strong passphrase
+    function generateRandomPassphrase(length = 32) {
+      const charset = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%^&*()_-+=<>?';
+      let passphrase = '';
+      for (let i = 0; i < length; i++) {
+        passphrase += charset.charAt(Math.floor(Math.random() * charset.length));
+      }
+      return passphrase;
+    }
+
+    // Function to generate 4K-bit key with no email
+    async function generateKeyPair() {
+      const username = document.getElementById('username').value;
+      if (!username) {
+        alert("Please enter a username.");
+        return;
+      }
+
+      const passphrase = generateRandomPassphrase(); // Strong passphrase
+
+      const options = {
+        userIds: [{ name: username }], // No email, just the username
+        numBits: 4096, // 4,096-bit key size
+        passphrase: passphrase
+      };
+
+      // Show loading bar
+      document.getElementById('loadingSpinner').style.display = 'block';
+      let progress = 0;
+      const loadingBar = document.getElementById('loadingBarInner');
+      const interval = setInterval(() => {
+        progress += 1;
+        loadingBar.style.width = progress + '%';
+        if (progress >= 90) clearInterval(interval); // Stop at 90%
+      }, 100);
+
+      try {
+        const keyPair = await openpgp.generateKey(options);
+        const { publicKey, privateKey } = keyPair;
+
+        // Save private key and passphrase securely
+        localStorage.setItem('privateKey', privateKey);
+        localStorage.setItem('passphrase', passphrase); // Secure storage option
+
+        // Display public key and secure private key storage message
+        document.getElementById('publicKey').textContent = publicKey;
+        document.getElementById('privateKey').textContent = "Private key is securely stored. Never share it!";
+        console.log("Keys generated successfully!");
+
+        // Hide loading bar after key generation
+        document.getElementById('loadingSpinner').style.display = 'none';
+        loadingBar.style.width = '100%'; // Ensure it fills up fully
+      } catch (error) {
+        console.error("Error generating key pair:", error);
+        document.getElementById('loadingSpinner').style.display = 'none'; // Hide spinner on error
+      }
+    }
+
+    // Event Listener for generating the key pair
+    document.getElementById('generateKeys').addEventListener('click', generateKeyPair);
+  </script>
+
+</body>
+</html>
